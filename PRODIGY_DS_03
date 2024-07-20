@@ -1,0 +1,137 @@
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from datetime import datetime
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn import preprocessing
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import classification_report
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn import tree
+from sklearn.model_selection import GridSearchCV
+from imblearn.over_sampling import SMOTE
+import pydotplus
+
+
+from google.colab import files
+uploaded = files.upload()
+
+df2 = pd.read_csv('bank-full.csv',sep = ';')
+
+df2.head()
+
+df2.info()
+
+df2.describe()
+
+df2['age'] = df2['age'].astype(object)
+
+df2['day'] = df2['day'].astype(object)
+
+df2.y.value_counts()
+
+df2.describe(include = object)
+
+df2.isnull().sum()
+
+plt.figure(figsize = [15,10])
+df2.boxplot()
+
+sns.countplot(data = df2_cat['poutcome'])
+
+sns.countplot(data = df2_cat['contact'])
+
+sns.countplot(df2['y'])
+
+df2 = df2.drop('duration',axis= 1)
+
+df2_target = df2['y']
+df2_feat = df2.drop('y',axis = 1)
+df2_num = df2_feat.select_dtypes(include = [np.number])
+df2_num.columns
+
+df2_cat = df2_feat.select_dtypes(include = [object])
+df2_cat.columns
+
+dum = pd.get_dummies(data = df2_cat,drop_first = True)
+
+dum.head()
+
+columns_to_encode = ['age', 'job', 'marital', 'education', 'default', 'housing', 'loan','contact', 'day', 'month', 'poutcome']
+
+#ENCODING
+le = LabelEncoder()
+
+for col in columns_to_encode:
+    dum[col] = le.fit_transform(df2_cat[col].astype(str))
+
+dum.head()
+df2_num.hist()
+
+df2_num.kurtosis()
+
+df2_num.skew()
+
+#TRANSFORMATION
+num = StandardScaler().fit_transform(df2_num)
+df_num_scale = pd.DataFrame(num,columns = df2_num.columns)
+df_num_scale.head()
+
+X = pd.concat([df_num_scale,dum],axis =1)
+X.head()
+
+#TRAIN_TEST_SPLIT
+X_train,X_test,y_train,y_test = train_test_split(X,df2_target,random_state = 100,test_size=0.2)
+print('X_train',X_train.shape)
+print('X_test',X_test.shape)
+print('y_train',y_train.shape)
+print('y_test',y_test.shape)
+
+dt_class  = DecisionTreeClassifier(criterion = 'entropy',random_state = 100,class_weight='balanced')
+decision_tree = dt_class.fit(X_train,y_train)
+
+plt.figure(figsize = [15,10])
+tree.plot_tree(decision_tree,max_depth = 3,feature_names=X_train.columns,rounded = True)
+plt.show()
+
+tree_predict = decision_tree.predict(X_test)
+tree_predict[0:20]
+
+def train_report(model):
+  train_pred = model.predict(X_train)
+  return (classification_report(y_train,train_pred))
+
+def test_report(model):
+  test_pred = model.predict(X_test)
+  return (classification_report(y_test,test_pred))
+
+train_report = train_report(decision_tree)
+print(train_report)
+
+test_report = test_report(decision_tree)
+print(test_report)
+
+x = df2.drop('y', axis=1)
+y = df2['y']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+print("Class distribution before SMOTE:")
+print(y_train.value_counts(normalize=True))
+
+smote = SMOTE(random_state=42)
+X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train)
+
+print("\nClass distribution after SMOTE:")
+print(pd.Series(y_train_smote).value_counts(normalize=True))
+
+clf = DecisionTreeClassifier(random_state=42)
+clf.fit(X_train_smote, y_train_smote)
+
+y_pred = clf.predict(X_test)
+
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
